@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Nuke My Data",
+  "version": "1.0",
+  "description": "Automated GDPR Data Deletion Request Generator",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["https://generativelanguage.googleapis.com/*"],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
