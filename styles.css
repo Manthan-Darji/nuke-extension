@@ -1,6 +1,7 @@
 body {
     background-color: #0d1117;
-    color: #00ff41; /* Cyberpunk Green */
+    color: #00ff41;
+    /* Cyberpunk Green */
     font-family: 'Courier New', Courier, monospace;
     width: 350px;
     padding: 15px;
@@ -25,7 +26,8 @@ label {
     font-weight: bold;
 }
 
-input[type="text"], input[type="password"] {
+input[type="text"],
+input[type="password"] {
     width: 100%;
     padding: 8px;
     background: #000;
@@ -91,7 +93,18 @@ button:disabled {
 }
 
 /* Scrollbar styling for the hacker look */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: #0d1117; }
-::-webkit-scrollbar-thumb { background: #30363d; }
-::-webkit-scrollbar-thumb:hover { background: #00ff41; }
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0d1117;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #30363d;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #00ff41;
+}
