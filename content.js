@@ -1,84 +1,92 @@
-console.log("Nuke My Data: Content Script Loaded");
+console.log("Nuke My Data: HUNTER-KILLER V3.0 Loaded");
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "start_nuke") {
-        console.log("Nuke Sequence Received:", request.queue);
         processQueue(request.queue);
-        sendResponse({ status: "started" });
+        sendResponse({ status: "acknowledged" });
     }
+    return true;
 });
 
 async function processQueue(queue) {
     for (const emailData of queue) {
         await sendSingleEmail(emailData);
-        // Wait 5 seconds between emails to prevent Gmail spam detection
-        await wait(5000);
+        await wait(2500); // 2.5s cooldown between emails
     }
-    alert("ALL TARGETS PROCESSED.");
+    alert("SEQUENCE COMPLETE. CHECK 'SENT' FOLDER.");
 }
 
 async function sendSingleEmail(data) {
     return new Promise(async (resolve) => {
-        // 1. Click Compose
-        const composeBtn = document.querySelector('div[role="button"][gh="cm"]');
+        // --- STEP 1: FIND COMPOSE BUTTON ---
+        // We look for the button with the specific Google 'jscontroller' attribute or the text "Compose"
+        let composeBtn = document.querySelector('div[jscontroller][role="button"][gh="cm"]') ||
+            Array.from(document.querySelectorAll('div[role="button"]')).find(el => el.innerText === "Compose");
+
         if (!composeBtn) {
-            console.error("Compose button not found");
+            console.error("Critical: Compose button not found.");
+            // Try fallback for smaller screens
+            composeBtn = document.querySelector('.T-I.T-I-KE.L3');
+        }
+
+        if (!composeBtn) {
+            alert("ERROR: GMAIL LAYOUT UNKNOWN. RELOAD PAGE.");
             resolve(); return;
         }
+
         composeBtn.click();
 
-        // Wait for window to appear
-        await wait(2000);
+        // Wait for the popup to appear (dynamic wait)
+        await waitForElement('input[name="subjectbox"]');
 
-        // 2. Select Fields (Selectors updated for 2026)
-        // 'To' field is often a textarea or input with 'peoplekit-id'
-        let toField = document.querySelector('input[peoplekit-id]') ||
-            document.querySelector('div[name="to"] input') ||
-            document.querySelector('textarea[name="to"]');
+        // --- STEP 2: INJECT DATA ---
 
-        let subjectField = document.querySelector('input[name="subjectbox"]');
-        let bodyField = document.querySelector('div[aria-label="Message Body"]') ||
-            document.querySelector('div[role="textbox"][aria-label="Message Body"]');
-
-        // 3. Fill Data
-        if (toField && subjectField && bodyField) {
-            // Fill To
-            toField.focus();
-            document.execCommand('insertText', false, data.to);
-            // Press Tab/Enter to solidify the chip
-            toField.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
-
-            // Fill Subject
+        // Subject
+        const subjectField = document.querySelector('input[name="subjectbox"]');
+        if (subjectField) {
             subjectField.focus();
             document.execCommand('insertText', false, data.subject);
+        }
 
-            // Fill Body
+        // To (Recipients) - Tricky part
+        const toField = document.querySelector('input[peoplekit-id]') ||
+            document.querySelector('input[autocomplete="email"]');
+        if (toField) {
+            toField.focus();
+            document.execCommand('insertText', false, data.to);
+            await wait(200);
+            toField.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' })); // Lock in the email
+        }
+
+        // Body
+        const bodyField = document.querySelector('div[aria-label="Message Body"]') ||
+            document.querySelector('div[role="textbox"][contenteditable="true"]');
+        if (bodyField) {
             bodyField.focus();
             document.execCommand('insertText', false, data.body);
-
-            // 4. CLICK SEND (Optional - uncomment to enable auto-send)
-            // Be careful: Gmail send button usually has text "Send" or role "button"
-            await wait(1000);
-
-            // Find button that contains text "Send" and is visible
-            const buttons = Array.from(document.querySelectorAll('div[role="button"]'));
-            const sendBtn = buttons.find(b => b.innerText === 'Send' && b.offsetParent !== null);
-
-            if (sendBtn) {
-                // UNCOMMENT THE NEXT LINE TO ACTUALLY SEND
-                sendBtn.click();
-                console.log(`Sent to ${data.to}`);
-            } else {
-                console.log("Send button not found (or auto-send disabled for safety)");
-            }
-
-            // If we sent it, the window closes. If not, we might need to close it manually or leave it.
-            // For this demo, assuming click() worked, the window closes.
         }
+
+        console.log(`Payload injected for ${data.to}`);
+
+        // Optional: Auto-Send
+        // const sendBtn = document.querySelector('div[role="button"][data-tooltip^="Send"]');
+        // if(sendBtn) sendBtn.click();
+
         resolve();
     });
 }
 
-function wait(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function waitForElement(selector) {
+    return new Promise(resolve => {
+        if (document.querySelector(selector)) return resolve(document.querySelector(selector));
+        const observer = new MutationObserver(() => {
+            if (document.querySelector(selector)) {
+                observer.disconnect();
+                resolve(document.querySelector(selector));
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    });
 }

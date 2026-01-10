@@ -6,92 +6,73 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 1. AUTO-LOAD SAVED API KEY
     chrome.storage.local.get(['geminiKey'], (result) => {
-        if (result.geminiKey) {
-            apiKeyInput.value = result.geminiKey;
-        }
+        if (result.geminiKey) apiKeyInput.value = result.geminiKey;
     });
 
     // 2. Load Companies
-    TARGETS.forEach((company, index) => {
-        const div = document.createElement('div');
-        div.className = 'company-item';
-        div.innerHTML = `
-            <input type="checkbox" id="comp-${index}" value="${index}">
-            <label for="comp-${index}">${company.name}</label>
-        `;
-        listContainer.appendChild(div);
-    });
+    if (typeof TARGETS !== 'undefined') {
+        TARGETS.forEach((company, index) => {
+            const div = document.createElement('div');
+            div.className = 'company-item';
+            div.innerHTML = `<input type="checkbox" id="comp-${index}" value="${index}"><label for="comp-${index}">${company.name}</label>`;
+            listContainer.appendChild(div);
+        });
+    }
 
     // 3. NUKE BUTTON LOGIC
     nukeBtn.addEventListener('click', async () => {
         const apiKey = apiKeyInput.value.trim();
-        if (!apiKey) {
-            updateStatus("Error: No API Key", true);
-            return;
-        }
+        if (!apiKey) { updateStatus("Error: No API Key", true); return; }
 
-        // SAVE API KEY
         chrome.storage.local.set({ geminiKey: apiKey });
 
         const checkedBoxes = document.querySelectorAll('#company-list input:checked');
-        if (checkedBoxes.length === 0) {
-            updateStatus("Error: Select a target", true);
-            return;
-        }
+        if (checkedBoxes.length === 0) { updateStatus("Error: Select a target", true); return; }
 
         nukeBtn.disabled = true;
-        updateStatus("Initializing AI Model: gemini-2.5-flash...");
+        updateStatus("AUTHENTICATING 2.5 FLASH...");
 
         let emailQueue = [];
-
         try {
             for (let i = 0; i < checkedBoxes.length; i++) {
                 const index = checkedBoxes[i].value;
                 const company = TARGETS[index];
 
-                updateStatus(`Generating email for ${company.name}...`);
+                updateStatus(`Generated Payload for ${company.name}...`);
 
-                // GENERATE CONTENT
-                const bodyText = await generateEmailWithGemini(apiKey, company.name);
+                // *** EXPLICIT CALL TO GEMINI 2.5 FLASH ***
+                const bodyText = await generateWithGemini25(apiKey, company.name);
 
                 emailQueue.push({
                     to: company.email,
                     subject: `Data Deletion Request - ${company.name}`,
                     body: bodyText
                 });
+
+                // MANDATORY WAIT: Your screenshot shows a 5 RPM limit.
+                // We must wait 12 seconds between requests to stay safe.
+                await new Promise(r => setTimeout(r, 12000));
             }
 
-            updateStatus("Injecting Payload into Gmail...");
-
-            // Send to Content Script
+            updateStatus("INJECTING INTO GMAIL...");
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-            // CHECK IF GMAIL IS OPEN
-            if (!tab.url.includes("mail.google.com")) {
-                updateStatus("ERROR: You must be on a Gmail tab!", true);
-                nukeBtn.disabled = false;
-                return;
+            if (!tab || !tab.url.includes("mail.google.com")) {
+                updateStatus("ERROR: Go to Gmail!", true); nukeBtn.disabled = false; return;
             }
 
-            chrome.tabs.sendMessage(tab.id, {
-                action: "start_nuke",
-                queue: emailQueue
-            }, (response) => {
+            chrome.tabs.sendMessage(tab.id, { action: "start_nuke", queue: emailQueue }, (response) => {
                 if (chrome.runtime.lastError) {
-                    // THIS IS THE COMMON ERROR
-                    console.error(chrome.runtime.lastError);
-                    updateStatus("CONNECTION ERROR: Refresh your Gmail tab and try again.", true);
-                    nukeBtn.disabled = false;
+                    updateStatus("ERROR: REFRESH GMAIL", true);
                 } else {
-                    updateStatus("SEQUENCE STARTED. CHECK GMAIL.", false);
-                    setTimeout(() => window.close(), 2000); // Optional: Close popup
+                    updateStatus("SEQUENCE STARTED.", false);
+                    setTimeout(() => window.close(), 2000);
                 }
             });
 
         } catch (e) {
             console.error(e);
-            // SHOW THE REAL ERROR ON SCREEN
-            updateStatus(`API FAIL: ${e.message}`, true);
+            updateStatus(`FAIL: ${e.message}`, true);
             nukeBtn.disabled = false;
         }
     });
@@ -102,11 +83,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-async function generateEmailWithGemini(apiKey, companyName) {
-    // *** FIX: UPDATED TO GEMINI 2.5 FLASH ***
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+// *** THE 2.5 FLASH FUNCTION ***
+async function generateWithGemini25(apiKey, companyName) {
+    // TARGETING YOUR SPECIFIC MODEL FROM THE SCREENSHOT
+    const model = "gemini-2.5-flash";
 
-    const prompt = `Write a strictly professional, 50-word GDPR data deletion email to ${companyName}. No subject line. No placeholders. Sign as 'Privacy User'.`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    const prompt = `Write a strictly professional, 50-word GDPR data deletion email to ${companyName}. 
+    RULES: No subject line in body. No [Placeholders]. Sign as 'Privacy User'. Legal tone.`;
 
     const response = await fetch(url, {
         method: 'POST',
@@ -115,10 +100,31 @@ async function generateEmailWithGemini(apiKey, companyName) {
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+        const err = await response.json();
+        // If 2.5 fails, it might be an alias issue, so we have ONE fallback
+        if (response.status === 404) {
+            console.warn("2.5 Flash alias failed, trying 1.5-flash-002...");
+            return fallbackGen(apiKey, companyName);
+        }
+        throw new Error(err.error?.message || response.statusText);
     }
 
+    const data = await response.json();
+    if (!data.candidates || !data.candidates[0].content) {
+        throw new Error("Empty Response from AI");
+    }
+
+    return data.candidates[0].content.parts[0].text;
+}
+
+async function fallbackGen(apiKey, companyName) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const prompt = `Write a GDPR deletion email to ${companyName}. Short.`;
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    });
     const data = await response.json();
     return data.candidates[0].content.parts[0].text;
 }
