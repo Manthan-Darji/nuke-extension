@@ -1,0 +1,97 @@
+body {
+    background-color: #0d1117;
+    color: #00ff41; /* Cyberpunk Green */
+    font-family: 'Courier New', Courier, monospace;
+    width: 350px;
+    padding: 15px;
+    border: 1px solid #00ff41;
+}
+
+h2 {
+    text-align: center;
+    text-transform: uppercase;
+    border-bottom: 1px dashed #00ff41;
+    padding-bottom: 10px;
+    text-shadow: 0 0 5px #00ff41;
+}
+
+.input-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input[type="text"], input[type="password"] {
+    width: 100%;
+    padding: 8px;
+    background: #000;
+    border: 1px solid #30363d;
+    color: #00ff41;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+#company-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #30363d;
+    padding: 5px;
+    margin-bottom: 15px;
+    background: #161b22;
+}
+
+.company-item {
+    display: flex;
+    align-items: center;
+    padding: 5px;
+    border-bottom: 1px solid #30363d;
+}
+
+.company-item:hover {
+    background-color: #21262d;
+}
+
+.company-item input {
+    margin-right: 10px;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background-color: #238636;
+    color: #ffffff;
+    border: none;
+    font-family: inherit;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.2s;
+}
+
+button:hover {
+    background-color: #2ea043;
+    box-shadow: 0 0 10px #2ea043;
+}
+
+button:disabled {
+    background-color: #30363d;
+    color: #8b949e;
+    cursor: not-allowed;
+}
+
+#status {
+    margin-top: 10px;
+    font-size: 12px;
+    text-align: center;
+    min-height: 20px;
+}
+
+/* Scrollbar styling for the hacker look */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #0d1117; }
+::-webkit-scrollbar-thumb { background: #30363d; }
+::-webkit-scrollbar-thumb:hover { background: #00ff41; }

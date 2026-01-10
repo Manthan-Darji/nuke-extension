@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Nuke My Data</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h2>// NUKE_MY_DATA</h2>
+    
+    <div class="input-group">
+        <label for="apiKey">Gemini API Key:</label>
+        <input type="password" id="apiKey" placeholder="Enter API Key...">
+    </div>
+
+    <div class="input-group">
+        <label>Select Targets:</label>
+        <div id="company-list">
+            </div>
+    </div>
+
+    <button id="nukeBtn">INITIALIZE NUKE</button>
+    <div id="status">Ready...</div>
+
+    <script src="companies.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>
