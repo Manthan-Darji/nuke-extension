@@ -32,6 +32,7 @@ The code is intentionally kept small and readable.
 
 ## 🗂 Project Structure
 
+```text
 nuke-extension/
 │
 ├── manifest.json      # Chrome extension configuration
@@ -40,6 +41,7 @@ nuke-extension/
 ├── companies.js       # Static list of companies and emails
 ├── content.js         # Gmail automation logic
 └── styles.css         # Cyber-style UI
+```
 ---
 
 ## ⚙️ How It Works (Simple Flow)
