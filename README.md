@@ -32,7 +32,6 @@ The code is intentionally kept small and readable.
 
 ## 🗂 Project Structure
 
-```text
 nuke-extension/
 │
 ├── manifest.json      # Chrome extension configuration
